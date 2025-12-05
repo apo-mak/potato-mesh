@@ -1,0 +1,76 @@
+<!--
+  Copyright © 2025-26 l5yth & contributors
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<div class="network-health-page network-health-page--full-width">
+  <div id="networkHealthPage" class="network-health-container">
+    <section class="network-health-section network-health-summary">
+      <h2 class="network-health-section__title">Network Overview</h2>
+      <div id="networkHealthSummary" class="network-health-summary__content">
+        <p class="network-health-status">Loading network health data...</p>
+      </div>
+    </section>
+
+    <section class="network-health-section network-health-signal">
+      <h2 class="network-health-section__title">Signal Quality Heatmap</h2>
+      <div id="signalQualityMap" class="network-health-signal__map">
+        <div class="network-health-signal__placeholder">
+          <p>Loading signal quality data...</p>
+        </div>
+      </div>
+      <div class="network-health-signal__legend">
+        <span class="signal-legend-item signal-legend-item--excellent">Excellent (SNR ≥ 10dB)</span>
+        <span class="signal-legend-item signal-legend-item--good">Good (SNR ≥ 5dB)</span>
+        <span class="signal-legend-item signal-legend-item--fair">Fair (SNR ≥ 0dB)</span>
+        <span class="signal-legend-item signal-legend-item--poor">Poor (SNR < 0dB)</span>
+      </div>
+    </section>
+
+    <section class="network-health-section network-health-congestion">
+      <h2 class="network-health-section__title">Channel Congestion Monitor</h2>
+      <div class="network-health-congestion__controls">
+        <label for="congestionTimeRange">Time Range:</label>
+        <select id="congestionTimeRange" class="network-health-select">
+          <option value="1h">Last Hour</option>
+          <option value="24h">Last 24 Hours</option>
+          <option value="7d">Last 7 Days</option>
+        </select>
+      </div>
+      <div id="congestionGauge" class="network-health-congestion__gauge">
+        <p class="network-health-status">Loading congestion data...</p>
+      </div>
+      <div id="congestionChart" class="network-health-congestion__chart">
+        <p class="network-health-status">Loading congestion history...</p>
+      </div>
+    </section>
+
+    <section class="network-health-section network-health-reliability">
+      <h2 class="network-health-section__title">Node Reliability Scores</h2>
+      <div id="reliabilityTable" class="network-health-reliability__table">
+        <p class="network-health-status">Loading reliability data...</p>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeNetworkHealthPage } from '/assets/js/app/network-health.js';
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initializeNetworkHealthPage({
+      document,
+      rootId: 'networkHealthPage',
+    });
+  });
+</script>
