@@ -25,9 +25,6 @@ module PotatoMesh
         "7d" => 604_800,
       }.freeze
 
-      # Expected check-in interval for reliability calculation (15 minutes).
-      EXPECTED_CHECKIN_INTERVAL = 15 * 60
-
       # Signal quality thresholds for classification.
       SIGNAL_THRESHOLDS = {
         excellent: { snr_min: 10.0, rssi_min: -70 },
