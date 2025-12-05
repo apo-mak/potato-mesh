@@ -52,9 +52,11 @@ require_relative "application/queries"
 require_relative "application/data_processing"
 require_relative "application/filesystem"
 require_relative "application/instances"
+require_relative "application/network_health_queries"
 require_relative "application/routes/api"
 require_relative "application/routes/ingest"
 require_relative "application/routes/root"
+require_relative "application/routes/network_health"
 
 module PotatoMesh
   class Application < Sinatra::Base
@@ -68,6 +70,7 @@ module PotatoMesh
     extend App::Queries
     extend App::DataProcessing
     extend App::Filesystem
+    extend App::NetworkHealthQueries
 
     helpers App::Helpers
     include App::Database
@@ -79,10 +82,12 @@ module PotatoMesh
     include App::Queries
     include App::DataProcessing
     include App::Filesystem
+    include App::NetworkHealthQueries
 
     register App::Routes::Api
     register App::Routes::Ingest
     register App::Routes::Root
+    register App::Routes::NetworkHealth
 
     DEFAULT_PORT = 41_447
     DEFAULT_BIND_ADDRESS = "0.0.0.0"
@@ -201,6 +206,7 @@ SELF_INSTANCE_ID = PotatoMesh::Application::SELF_INSTANCE_ID unless defined?(SEL
   PotatoMesh::App::Prometheus,
   PotatoMesh::App::Queries,
   PotatoMesh::App::DataProcessing,
+  PotatoMesh::App::NetworkHealthQueries,
 ].each do |mod|
   Object.include(mod) unless Object < mod
 end
