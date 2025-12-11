@@ -84,7 +84,10 @@ module PotatoMesh
       def find_ingestor_by_api_key(db, api_key)
         return nil if api_key.nil? || api_key.empty?
 
-        # Ensure the API key is properly encoded as UTF-8 to avoid SQLite3 parameter binding issues
+        # Ensure the API key is properly encoded as UTF-8 to avoid SQLite3 parameter binding issues.
+        # HTTP Authorization headers are often ASCII-8BIT encoded, which causes parameterized queries
+        # to fail silently when compared against UTF-8 TEXT columns in SQLite.
+        # We also pass the parameter as a variadic argument rather than an array for compatibility.
         normalized_key = api_key.to_s.force_encoding('UTF-8')
 
         row = with_busy_retry do
@@ -195,7 +198,10 @@ module PotatoMesh
       def record_ingestor_request(db, api_key, version: nil)
         return if api_key.nil? || api_key.empty?
 
-        # Ensure the API key is properly encoded as UTF-8 to avoid SQLite3 parameter binding issues
+        # Ensure the API key is properly encoded as UTF-8 to avoid SQLite3 parameter binding issues.
+        # HTTP Authorization headers are often ASCII-8BIT encoded, which causes parameterized queries
+        # to fail silently when compared against UTF-8 TEXT columns in SQLite.
+        # We also pass parameters as variadic arguments rather than an array for compatibility.
         normalized_key = api_key.to_s.force_encoding('UTF-8')
         now = Time.now.to_i
 
