@@ -84,6 +84,9 @@ module PotatoMesh
       def find_ingestor_by_api_key(db, api_key)
         return nil if api_key.nil? || api_key.empty?
 
+        # Ensure the API key is properly encoded as UTF-8 to avoid SQLite3 parameter binding issues
+        normalized_key = api_key.to_s.force_encoding('UTF-8')
+
         row = with_busy_retry do
           db.execute(
             <<~SQL,
@@ -92,7 +95,7 @@ module PotatoMesh
             FROM ingestors
             WHERE api_key = ? AND is_active = 1
           SQL
-            [api_key],
+            normalized_key,
           ).first
         end
 
@@ -192,6 +195,8 @@ module PotatoMesh
       def record_ingestor_request(db, api_key, version: nil)
         return if api_key.nil? || api_key.empty?
 
+        # Ensure the API key is properly encoded as UTF-8 to avoid SQLite3 parameter binding issues
+        normalized_key = api_key.to_s.force_encoding('UTF-8')
         now = Time.now.to_i
 
         with_busy_retry do
@@ -202,7 +207,9 @@ module PotatoMesh
               SET last_request_time = ?, request_count = request_count + 1, version = ?
               WHERE api_key = ?
             SQL
-              [now, version, api_key],
+              now,
+              version,
+              normalized_key,
             )
           else
             db.execute(
@@ -211,7 +218,8 @@ module PotatoMesh
               SET last_request_time = ?, request_count = request_count + 1
               WHERE api_key = ?
             SQL
-              [now, api_key],
+              now,
+              normalized_key,
             )
           end
         end
