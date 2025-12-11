@@ -87,7 +87,6 @@ module PotatoMesh
         # Ensure the API key is properly encoded as UTF-8 to avoid SQLite3 parameter binding issues.
         # HTTP Authorization headers are often ASCII-8BIT encoded, which causes parameterized queries
         # to fail silently when compared against UTF-8 TEXT columns in SQLite.
-        # We also pass the parameter as a variadic argument rather than an array for compatibility.
         # Use .dup to handle frozen string literals (frozen_string_literal: true).
         normalized_key = api_key.to_s.dup.force_encoding('UTF-8')
 
@@ -99,7 +98,7 @@ module PotatoMesh
             FROM ingestors
             WHERE api_key = ? AND is_active = 1
           SQL
-            normalized_key,
+            [normalized_key],
           ).first
         end
 
@@ -202,7 +201,6 @@ module PotatoMesh
         # Ensure the API key is properly encoded as UTF-8 to avoid SQLite3 parameter binding issues.
         # HTTP Authorization headers are often ASCII-8BIT encoded, which causes parameterized queries
         # to fail silently when compared against UTF-8 TEXT columns in SQLite.
-        # We also pass parameters as variadic arguments rather than an array for compatibility.
         # Use .dup to handle frozen string literals (frozen_string_literal: true).
         normalized_key = api_key.to_s.dup.force_encoding('UTF-8')
         now = Time.now.to_i
@@ -215,9 +213,7 @@ module PotatoMesh
               SET last_request_time = ?, request_count = request_count + 1, version = ?
               WHERE api_key = ?
             SQL
-              now,
-              version,
-              normalized_key,
+              [now, version, normalized_key],
             )
           else
             db.execute(
@@ -226,8 +222,7 @@ module PotatoMesh
               SET last_request_time = ?, request_count = request_count + 1
               WHERE api_key = ?
             SQL
-              now,
-              normalized_key,
+              [now, normalized_key],
             )
           end
         end
