@@ -981,12 +981,25 @@ export function initializeApp(config) {
    * @returns {{x: number, y: number}|null} Canvas coordinates or null if out of bounds.
    */
   function projectToCanvas(lon, lat, bounds, size) {
-    if (lon < bounds.west || lon > bounds.east || lat < bounds.south || lat > bounds.north) {
+    if (!isPointWithinBounds(lon, lat, bounds)) {
       return null;
     }
     const x = ((lon - bounds.west) / (bounds.east - bounds.west)) * size;
     const y = ((bounds.north - lat) / (bounds.north - bounds.south)) * size;
     return { x, y };
+  }
+
+  /**
+   * Check if a point is within the given bounds.
+   *
+   * @param {number} lon Longitude in degrees.
+   * @param {number} lat Latitude in degrees.
+   * @param {{west: number, east: number, north: number, south: number}} bounds Tile bounds.
+   * @returns {boolean} True if the point is within bounds.
+   */
+  function isPointWithinBounds(lon, lat, bounds) {
+    return lon >= bounds.west && lon <= bounds.east &&
+           lat >= bounds.south && lat <= bounds.north;
   }
 
   /**
@@ -997,10 +1010,7 @@ export function initializeApp(config) {
    * @returns {boolean} True if any part of the polyline is within bounds.
    */
   function polylineIntersectsBounds(coords, bounds) {
-    return coords.some(([lon, lat]) =>
-      lon >= bounds.west && lon <= bounds.east &&
-      lat >= bounds.south && lat <= bounds.north
-    );
+    return coords.some(([lon, lat]) => isPointWithinBounds(lon, lat, bounds));
   }
 
   /**
@@ -1048,8 +1058,7 @@ export function initializeApp(config) {
       if (zoom >= 3) {
         ctx.fillStyle = '#d62728';
         MAJOR_CITIES.forEach(city => {
-          if (city.lon < bounds.west || city.lon > bounds.east ||
-              city.lat < bounds.south || city.lat > bounds.north) {
+          if (!isPointWithinBounds(city.lon, city.lat, bounds)) {
             return;
           }
           const point = projectToCanvas(city.lon, city.lat, bounds, size);
@@ -1081,8 +1090,7 @@ export function initializeApp(config) {
 
         COUNTRIES.forEach(country => {
           const [lon, lat] = country.centroid;
-          if (lon < bounds.west || lon > bounds.east ||
-              lat < bounds.south || lat > bounds.north) {
+          if (!isPointWithinBounds(lon, lat, bounds)) {
             return;
           }
           const point = projectToCanvas(lon, lat, bounds, size);
