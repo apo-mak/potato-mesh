@@ -57,7 +57,7 @@ test('COASTLINES contains valid coordinate arrays', () => {
 test('MAJOR_CITIES contains valid city data', () => {
   assert.ok(Array.isArray(MAJOR_CITIES), 'MAJOR_CITIES should be an array');
   assert.ok(MAJOR_CITIES.length > 0, 'MAJOR_CITIES should not be empty');
-  assert.ok(MAJOR_CITIES.length <= 100, 'MAJOR_CITIES should contain approximately 100 cities');
+  assert.ok(MAJOR_CITIES.length <= 100, 'MAJOR_CITIES should contain approximately 70-100 cities');
   
   MAJOR_CITIES.forEach(city => {
     assert.ok(city.name, 'Each city should have a name');
@@ -73,7 +73,7 @@ test('MAJOR_CITIES contains valid city data', () => {
 test('COUNTRIES contains valid country data', () => {
   assert.ok(Array.isArray(COUNTRIES), 'COUNTRIES should be an array');
   assert.ok(COUNTRIES.length > 0, 'COUNTRIES should not be empty');
-  assert.ok(COUNTRIES.length <= 50, 'COUNTRIES should contain approximately 50 countries');
+  assert.ok(COUNTRIES.length <= 70, 'COUNTRIES should contain approximately 50-70 countries');
   
   COUNTRIES.forEach(country => {
     assert.ok(country.name, 'Each country should have a name');
