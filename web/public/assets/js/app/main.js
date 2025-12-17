@@ -66,6 +66,7 @@ import {
   roleColors,
   roleRenderOrder,
 } from './role-helpers.js';
+import { COASTLINES, MAJOR_CITIES, COUNTRIES } from './offline-map-data.js';
 
 /**
  * Entry point for the interactive dashboard. Wires up event listeners,
@@ -971,6 +972,131 @@ export function initializeApp(config) {
   }
 
   /**
+   * Project a geographic coordinate to canvas pixel coordinates.
+   *
+   * @param {number} lon Longitude in degrees.
+   * @param {number} lat Latitude in degrees.
+   * @param {{west: number, east: number, north: number, south: number}} bounds Tile bounds.
+   * @param {number} size Tile size in pixels.
+   * @returns {{x: number, y: number}|null} Canvas coordinates or null if out of bounds.
+   */
+  function projectToCanvas(lon, lat, bounds, size) {
+    if (lon < bounds.west || lon > bounds.east || lat < bounds.south || lat > bounds.north) {
+      return null;
+    }
+    const x = ((lon - bounds.west) / (bounds.east - bounds.west)) * size;
+    const y = ((bounds.north - lat) / (bounds.north - bounds.south)) * size;
+    return { x, y };
+  }
+
+  /**
+   * Check if a polyline intersects with tile bounds.
+   *
+   * @param {Array<Array<number>>} coords Array of [lon, lat] coordinates.
+   * @param {{west: number, east: number, north: number, south: number}} bounds Tile bounds.
+   * @returns {boolean} True if any part of the polyline is within bounds.
+   */
+  function polylineIntersectsBounds(coords, bounds) {
+    return coords.some(([lon, lat]) =>
+      lon >= bounds.west && lon <= bounds.east &&
+      lat >= bounds.south && lat <= bounds.north
+    );
+  }
+
+  /**
+   * Render geographic features (coastlines, cities, labels) on an offline tile.
+   *
+   * @param {CanvasRenderingContext2D} ctx Canvas rendering context.
+   * @param {{west: number, east: number, north: number, south: number}} bounds Tile bounds in degrees.
+   * @param {number} zoom Current zoom level.
+   * @param {number} size Tile size in pixels.
+   * @returns {void}
+   */
+  function renderGeographicFeatures(ctx, bounds, zoom, size) {
+    try {
+      // Draw water background
+      ctx.fillStyle = '#a5bfdd';
+      ctx.fillRect(0, 0, size, size);
+
+      // Draw coastlines as land areas
+      ctx.fillStyle = '#e8e4d0';
+      ctx.strokeStyle = '#999999';
+      ctx.lineWidth = 0.5;
+
+      COASTLINES.forEach(coastline => {
+        if (!polylineIntersectsBounds(coastline.coords, bounds)) return;
+
+        ctx.beginPath();
+        let started = false;
+        coastline.coords.forEach(([lon, lat]) => {
+          const point = projectToCanvas(lon, lat, bounds, size);
+          if (point) {
+            if (!started) {
+              ctx.moveTo(point.x, point.y);
+              started = true;
+            } else {
+              ctx.lineTo(point.x, point.y);
+            }
+          }
+        });
+        if (started) {
+          ctx.stroke();
+        }
+      });
+
+      // Draw cities if zoom level is sufficient
+      if (zoom >= 3) {
+        ctx.fillStyle = '#d62728';
+        MAJOR_CITIES.forEach(city => {
+          if (city.lon < bounds.west || city.lon > bounds.east ||
+              city.lat < bounds.south || city.lat > bounds.north) {
+            return;
+          }
+          const point = projectToCanvas(city.lon, city.lat, bounds, size);
+          if (point) {
+            const radius = zoom >= 5 ? 3 : 2;
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, radius, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Draw city labels at higher zoom levels
+            if (zoom >= 5 && city.pop > 5) {
+              ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+              ctx.font = 'bold 10px system-ui, sans-serif';
+              ctx.textAlign = 'left';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(city.name, point.x + 5, point.y);
+              ctx.fillStyle = '#d62728';
+            }
+          }
+        });
+      }
+
+      // Draw country labels at appropriate zoom levels
+      if (zoom >= 2 && zoom <= 6) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.font = zoom >= 4 ? 'bold 12px system-ui, sans-serif' : 'bold 10px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        COUNTRIES.forEach(country => {
+          const [lon, lat] = country.centroid;
+          if (lon < bounds.west || lon > bounds.east ||
+              lat < bounds.south || lat > bounds.north) {
+            return;
+          }
+          const point = projectToCanvas(lon, lat, bounds, size);
+          if (point) {
+            ctx.fillText(country.name, point.x, point.y);
+          }
+        });
+      }
+    } catch (error) {
+      console.warn('Failed to render geographic features on offline tile:', error);
+    }
+  }
+
+  /**
    * Create a minimal Leaflet tile layer that renders offline tiles from cache.
    *
    * @returns {L.GridLayer} Configured tile layer instance.
@@ -1023,12 +1149,17 @@ export function initializeApp(config) {
         return getOfflineFallbackTile(size);
       }
       try {
-        const gradient = ctx.createLinearGradient(0, 0, size, size);
-        gradient.addColorStop(0, 'rgba(33, 66, 110, 0.92)');
-        gradient.addColorStop(1, 'rgba(64, 98, 144, 0.92)');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, size, size);
+        const west = tileToLon(coords.x, coords.z);
+        const east = tileToLon(coords.x + 1, coords.z);
+        const north = tileToLat(coords.y, coords.z);
+        const south = tileToLat(coords.y + 1, coords.z);
+        
+        const bounds = { west, east, north, south };
 
+        // Render geographic features (coastlines, cities, countries)
+        renderGeographicFeatures(ctx, bounds, coords.z, size);
+
+        // Draw grid overlay
         ctx.strokeStyle = 'rgba(255,255,255,0.12)';
         ctx.lineWidth = 1;
         const steps = 4;
@@ -1044,27 +1175,33 @@ export function initializeApp(config) {
           ctx.stroke();
         }
 
-        const west = tileToLon(coords.x, coords.z);
-        const east = tileToLon(coords.x + 1, coords.z);
-        const north = tileToLat(coords.y, coords.z);
-        const south = tileToLat(coords.y + 1, coords.z);
-
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        // Draw coordinate labels
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = 3;
         ctx.font = '12px system-ui, sans-serif';
         ctx.textBaseline = 'top';
+        ctx.strokeText(`${west.toFixed(1)}°`, 8, 8);
         ctx.fillText(`${west.toFixed(1)}°`, 8, 8);
         ctx.textBaseline = 'bottom';
+        ctx.strokeText(`${east.toFixed(1)}°`, 8, size - 8);
         ctx.fillText(`${east.toFixed(1)}°`, 8, size - 8);
         ctx.textAlign = 'right';
         ctx.textBaseline = 'top';
+        ctx.strokeText(`${north.toFixed(1)}°`, size - 8, 8);
         ctx.fillText(`${north.toFixed(1)}°`, size - 8, 8);
         ctx.textBaseline = 'bottom';
+        ctx.strokeText(`${south.toFixed(1)}°`, size - 8, size - 8);
         ctx.fillText(`${south.toFixed(1)}°`, size - 8, size - 8);
 
+        // Draw watermark
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
         ctx.font = 'bold 22px system-ui, sans-serif';
+        ctx.lineWidth = 4;
+        ctx.strokeText('PotatoMesh offline basemap', size / 2, size / 2);
         ctx.fillText('PotatoMesh offline basemap', size / 2, size / 2);
 
         return canvas;
